@@ -13,6 +13,7 @@ import { ChatClient } from "@twurple/chat";
 const MAX_OUTPUT_LENGTH = 450;
 const COMMAND_COOLDOWN = 15_000;
 
+// #region AI
 const systemInstruction = `
 You are a chat bot for the Twitch streamer Gladd whose purpose is to answer questions for his chat
 regardless of if they are about the streamer, silly, or real. Your information on Gladd is outdated,
@@ -45,6 +46,7 @@ const ai = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY!);
 const model = ai.getGenerativeModel({
 	model: "gemini-1.5-pro-latest",
 	systemInstruction,
+	// These filter Gemini's response, not the user's messages
 	safetySettings: [
 		{
 			category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
@@ -63,7 +65,9 @@ const model = ai.getGenerativeModel({
 		maxOutputTokens: MAX_OUTPUT_LENGTH,
 	},
 });
+// #endregion
 
+// #region Auth
 const sql = postgres(process.env.DATABASE_URL!);
 
 interface TokenData {
@@ -114,7 +118,9 @@ auth.addUser(
 	},
 	["chat"],
 );
+// #endregion
 
+// #region Logic
 const client = new ChatClient({ authProvider: auth, channels: ["Gladd", "xiBread_"] });
 client.connect();
 
@@ -153,6 +159,11 @@ client.onMessage(async (channel, user, text, msg) => {
 	}
 });
 
+/**
+ * Helper to truncate text because AI likes to ignore the max output length.
+ * This also makes sure that the response ends with a full sentence instead
+ * of stopping mid-sentence.
+ */
 function truncate(text: string, length = MAX_OUTPUT_LENGTH) {
 	text = text.trim().replace(/\n/g, " ");
 
@@ -171,3 +182,4 @@ function truncate(text: string, length = MAX_OUTPUT_LENGTH) {
 		.slice(0, -1)
 		.join("");
 }
+// #endregion
