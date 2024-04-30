@@ -36,6 +36,7 @@ export const REGULARS = [
 	"havok_RN",
 	"iBlasstoise",
 	"JadedKudos",
+	"KableKompany",
 	"KeijiMuno",
 	"ltsDerpDiggler",
 	"ltsIsMac",
