@@ -1,0 +1,17 @@
+{
+	"compilerOptions": {
+		"noEmit": true,
+		"outDir": "dist",
+		"strict": true,
+		"skipLibCheck": true,
+		"target": "ES2022",
+		"module": "Preserve",
+		"moduleDetection": "force",
+		"esModuleInterop": true,
+		"verbatimModuleSyntax": true,
+		"resolveJsonModule": true
+	},
+	"include": [
+		"**/*.ts"
+	]
+}
