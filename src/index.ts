@@ -139,14 +139,14 @@ client.onMessage(async (channel, user, text, msg) => {
 	try {
 		const { response } = await model.generateContent(question);
 		client.say(channel, truncate(response.text()), { replyTo: msg });
-	} catch (error) {
-		if (error instanceof GoogleGenerativeAIError) {
-			console.error(red(error.message));
-		}
-	}
 
-	globalTimestamp = now;
-	setTimeout(() => (globalTimestamp = Number.NaN), COMMAND_COOLDOWN);
+		globalTimestamp = now;
+		setTimeout(() => (globalTimestamp = Number.NaN), COMMAND_COOLDOWN);
+	} catch (error) {
+		if (!(error instanceof GoogleGenerativeAIError)) return;
+
+		console.log(red(error.message));
+	}
 });
 
 function truncate(text: string, length = MAX_OUTPUT_LENGTH) {
