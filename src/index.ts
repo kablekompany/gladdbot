@@ -109,6 +109,7 @@ client.connect();
 
 console.log(`${gray("[SYSTEM]")} Connected`);
 
+let rateLimitMessageSent = false;
 let globalTimestamp = Number.NaN;
 
 client.onMessage(async (channel, user, text, msg) => {
@@ -133,16 +134,29 @@ client.onMessage(async (channel, user, text, msg) => {
 		const { response } = await model.generateContent(question);
 		const truncated = truncate(response.text());
 
-		if (response.candidates) {
-			console.log(`${cyan("[ANSWER]")} ${truncated}`);
-		}
+		if (!truncated) {
+			console.log(`${gray("[SYSTEM]")} Message failed to generate. Ratings:`);
+			console.log(response.candidates?.[0].safetyRatings);
+		} else {
+			rateLimitMessageSent = false;
 
-		client.say(channel, truncated, { replyTo: msg });
+			console.log(`${cyan("[ANSWER]")} ${truncated}`);
+			client.say(channel, truncated, { replyTo: msg });
+		}
 
 		globalTimestamp = now;
 		setTimeout(() => (globalTimestamp = Number.NaN), COMMAND_COOLDOWN);
 	} catch (error) {
 		if (!(error instanceof GoogleGenerativeAIError)) return;
+
+		if (error.message.includes("429") && !rateLimitMessageSent) {
+			client.say(
+				channel,
+				"Slow down there partner! I can only answer so many questions at once, try again later.",
+			);
+
+			rateLimitMessageSent = true;
+		}
 
 		console.log(red(error.message));
 	}
