@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import process from "node:process";
-import { cyan, green, red, yellow } from "kleur/colors";
+import { cyan, gray, green, red, yellow } from "kleur/colors";
 import postgres from "postgres";
 import {
 	GoogleGenerativeAI,
@@ -12,9 +12,9 @@ import { RefreshingAuthProvider } from "@twurple/auth";
 import { ChatClient } from "@twurple/chat";
 import { COMMAND_COOLDOWN, MAX_OUTPUT_LENGTH, MODERATORS, REGULARS } from "./consts";
 
+// #region AI
 const rawInstructions = await fs.readFile("./instructions.txt", "utf-8");
 
-// #region AI
 const systemInstruction = rawInstructions
 	.replace("{{MAX_OUTPUT_LENGTH}}", `${MAX_OUTPUT_LENGTH}`)
 	.replace("{{MODERATORS}}", MODERATORS)
@@ -107,7 +107,7 @@ auth.addUser(
 const client = new ChatClient({ authProvider: auth, channels: ["Gladd", "xiBread_"] });
 client.connect();
 
-console.log("Connected");
+console.log(`${gray("[SYSTEM]")} Connected`);
 
 let globalTimestamp = Number.NaN;
 
@@ -127,11 +127,17 @@ client.onMessage(async (channel, user, text, msg) => {
 	const question = text.slice(4).trim();
 	if (!question) return;
 
-	console.log(`${cyan("[QUESTION]")} ${username} - ${cyan(question)}`);
+	console.log(`${cyan("[QUESTION]")} ${username}: ${question}`);
 
 	try {
 		const { response } = await model.generateContent(question);
-		client.say(channel, truncate(response.text()), { replyTo: msg });
+		const truncated = truncate(response.text());
+
+		if (response.candidates) {
+			console.log(`${cyan("[ANSWER]")} ${truncated}`);
+		}
+
+		client.say(channel, truncated, { replyTo: msg });
 
 		globalTimestamp = now;
 		setTimeout(() => (globalTimestamp = Number.NaN), COMMAND_COOLDOWN);
