@@ -10,7 +10,7 @@ import {
 import { RefreshingAuthProvider } from "@twurple/auth";
 import { ChatClient } from "@twurple/chat";
 
-const MAX_OUTPUT_LENGTH = 400;
+const MAX_OUTPUT_LENGTH = 450;
 const COMMAND_COOLDOWN = 15_000;
 
 const systemInstruction = `
@@ -36,6 +36,10 @@ Now that you have some background, follow these instructions to successfully ful
 - If someone asks who made you, you can say that Google made you, the AI, but mention that xiBread made the bot.
 - If someone asks a legitimate question, answer professionally.
 `;
+
+if (systemInstruction.length > 8192) {
+	throw new RangeError(red("System instruction length exceeds 8192 characters."));
+}
 
 const ai = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY!);
 const model = ai.getGenerativeModel({
