@@ -12,15 +12,21 @@ import {
 } from "@google/generative-ai";
 import { RefreshingAuthProvider } from "@twurple/auth";
 import { ChatClient } from "@twurple/chat";
-import { COMMAND_COOLDOWN, MAX_OUTPUT_LENGTH, MODERATORS, REGULARS } from "./consts";
+// import { COMMAND_COOLDOWN, MAX_OUTPUT_LENGTH, MODERATORS, REGULARS } from "./consts";
+
+const MAX_OUTPUT_LENGTH = 450;
+const COMMAND_COOLDOWN = 15_000;
 
 // #region AI
-const rawInstructions = await fs.readFile("./instructions.txt", "utf-8");
+const rawInstructions = await fs.readFile("./data/instructions.txt", "utf-8");
+
+const moderatorList = await fs.readFile("./data/moderators.txt", "utf-8");
+const regularsList = await fs.readFile("./data/regulars.txt", "utf-8");
 
 const systemInstruction = rawInstructions
 	.replace("{{MAX_OUTPUT_LENGTH}}", `${MAX_OUTPUT_LENGTH}`)
-	.replace("{{MODERATORS}}", MODERATORS)
-	.replace("{{REGULARS}}", REGULARS);
+	.replace("{{MODERATORS}}", moderatorList.replace(/\n/g, ", "))
+	.replace("{{REGULARS}}", regularsList.replace(/\n/g, ", "));
 
 if (systemInstruction.length > 8192) {
 	throw new RangeError(red("System instruction length exceeds 8192 characters."));
@@ -137,9 +143,11 @@ client.onMessage(async (channel, user, text, msg) => {
 
 	try {
 		const { response } = await model.generateContent(question);
-		const truncated = truncate(response.text());
 
-		if (!truncated) {
+		const rawText = response.text();
+		const truncated = truncate(rawText);
+
+		if (!rawText) {
 			console.log(`${gray("[SYSTEM]")} Message failed to generate. Ratings:`);
 			console.log(formatRatings(response.candidates![0].safetyRatings!));
 		} else {

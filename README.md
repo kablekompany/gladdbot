@@ -69,7 +69,7 @@ You'll need to read from this file and supply the data to `auth.addUser` and wri
 
 If you want a more secure option, you can use a database, which is what this project uses. Your table should look similar to this (example uses PostgreSQL):
 
-```postgres
+```sql
 CREATE TABLE tokens (
   id SERIAL CONSTRAINT PRIMARY KEY,
   access_token VARCHAR(100),
@@ -83,4 +83,4 @@ Once you have either of these options set up, fill in the access token and refre
 
 ### Customizing
 
-In order to customize the bot's personality and responses, edit the [`instructions.txt`](./instructions.txt) file to your liking. It's better to provide more information in order to get more curated responses. You can use the current file as a reference.
+In order to customize the bot's personality and responses, edit the [`instructions.txt`](./data/instructions.txt) file to your liking. It's better to provide more information in order to get more curated responses. You can use the current file as a reference.
