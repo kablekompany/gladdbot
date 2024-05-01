@@ -146,7 +146,7 @@ async function askCommand(params: string[], { reply, userDisplayName }: BotComma
  * of stopping mid-sentence.
  */
 function truncate(text: string, length = MAX_OUTPUT_LENGTH) {
-	text = text.trim().replace(/\n/g, " ");
+	text = text.trim().replace(/\n/g, " ").replace(/\\_/g, "_");
 
 	let truncated = "";
 
