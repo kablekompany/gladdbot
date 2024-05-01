@@ -12,7 +12,6 @@ import {
 } from "@google/generative-ai";
 import { RefreshingAuthProvider } from "@twurple/auth";
 import { ChatClient } from "@twurple/chat";
-// import { COMMAND_COOLDOWN, MAX_OUTPUT_LENGTH, MODERATORS, REGULARS } from "./consts";
 
 const MAX_OUTPUT_LENGTH = 450;
 const COMMAND_COOLDOWN = 15_000;
