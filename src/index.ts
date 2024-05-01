@@ -11,14 +11,12 @@ import {
 	type SafetyRating,
 } from "@google/generative-ai";
 import { RefreshingAuthProvider } from "@twurple/auth";
-import { ChatClient } from "@twurple/chat";
+import { Bot, type BotCommandContext, createBotCommand } from "@twurple/easy-bot";
 
-const MAX_OUTPUT_LENGTH = 450;
-const COMMAND_COOLDOWN = 15_000;
+const MAX_OUTPUT_LENGTH = 495;
 
 // #region AI
 const rawInstructions = await fs.readFile("./data/instructions.txt", "utf-8");
-
 const moderatorList = await fs.readFile("./data/moderators.txt", "utf-8");
 const regularsList = await fs.readFile("./data/regulars.txt", "utf-8");
 
@@ -52,7 +50,6 @@ const model = ai.getGenerativeModel({
 	],
 	generationConfig: {
 		maxOutputTokens: MAX_OUTPUT_LENGTH,
-		temperature: 0.6,
 	},
 });
 // #endregion
@@ -111,68 +108,38 @@ auth.addUser(
 // #endregion
 
 // #region Logic
-const client = new ChatClient({ authProvider: auth, channels: ["Gladd", "xiBread_"] });
-client.connect();
+const bot = new Bot({
+	authProvider: auth,
+	channels: ["Gladd", "xiBread_"],
+	commands: [createBotCommand("ask", askCommand, { aliases: ["ai"], globalCooldown: 0 })],
+});
 
-console.log(`${gray("[SYSTEM]")} Connected`);
+bot.onConnect(() => console.log(`${gray("[SYSTEM]")} Connected`));
 
-let rateLimitMessageSent = false;
-let globalTimestamp = Number.NaN;
-
-client.onMessage(async (channel, user, text, msg) => {
-	if (!text.trim().startsWith("!ask")) return;
-
-	const now = Date.now();
-	const username = yellow(msg.userInfo.displayName);
-	const expiration = globalTimestamp + COMMAND_COOLDOWN;
-
-	if (now < expiration) {
-		const timestamp = green(new Date(now).toLocaleString("en-US"));
-		const remaining = ((expiration - now) / 60 / 60).toFixed(1);
-
-		return console.log(
-			`${yellow("[COOLDOWN]")} ${username} - ${timestamp} (${remaining} seconds left)`,
-		);
-	}
-
-	const question = text.slice(4).trim();
+async function askCommand(params: string[], { reply, userDisplayName }: BotCommandContext) {
+	const question = params.join(" ");
 	if (!question) return;
 
-	console.log(`${cyan("[QUESTION]")} ${username}: ${question}`);
+	console.log(`${cyan("[QUESTION]")} ${yellow(userDisplayName)}: ${question}`);
 
 	try {
 		const { response } = await model.generateContent(question);
+		const truncated = truncate(response.text());
 
-		const rawText = response.text();
-		const truncated = truncate(rawText);
-
-		if (!rawText) {
+		if (!truncated) {
 			console.log(`${gray("[SYSTEM]")} Message failed to generate. Ratings:`);
 			console.log(formatRatings(response.candidates![0].safetyRatings!));
+			console.dir(response, { depth: 15 });
 		} else {
-			rateLimitMessageSent = false;
-
 			console.log(`${cyan("[ANSWER]")} ${truncated}`);
-			client.say(channel, truncated, { replyTo: msg });
+			await reply(truncated);
 		}
-
-		globalTimestamp = now;
-		setTimeout(() => (globalTimestamp = Number.NaN), COMMAND_COOLDOWN);
 	} catch (error) {
 		if (!(error instanceof GoogleGenerativeAIError)) return;
 
-		if (error.message.includes("429") && !rateLimitMessageSent) {
-			client.say(
-				channel,
-				"Slow down there partner! I can only answer so many questions at once, try again later.",
-			);
-
-			rateLimitMessageSent = true;
-		}
-
 		console.log(red(error.message));
 	}
-});
+}
 
 /**
  * Helper to truncate text because AI likes to ignore the max output length.
@@ -190,7 +157,10 @@ function truncate(text: string, length = MAX_OUTPUT_LENGTH) {
 	}
 
 	truncated = truncated.trim();
-	if (/[.?!]$/.test(truncated)) return truncated;
+
+	if (/(?:[.?!]|\p{Emoji})$/u.test(truncated)) {
+		return truncated;
+	}
 
 	return truncated
 		.split(/(\.|\?|!)/)
