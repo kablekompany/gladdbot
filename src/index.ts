@@ -123,13 +123,12 @@ async function askCommand(params: string[], { reply, userDisplayName }: BotComma
 	console.log(`${cyan("[QUESTION]")} ${yellow(userDisplayName)}: ${question}`);
 
 	try {
-		const { response } = await model.generateContent(question);
+		const { response } = await model.generateContent(`${userDisplayName} asked ${question}`);
 		const truncated = truncate(response.text());
 
 		if (!truncated) {
 			console.log(`${gray("[SYSTEM]")} Message failed to generate. Ratings:`);
 			console.log(formatRatings(response.candidates![0].safetyRatings!));
-			console.dir(response, { depth: 15 });
 		} else {
 			console.log(`${cyan("[ANSWER]")} ${truncated}`);
 			await reply(truncated);
