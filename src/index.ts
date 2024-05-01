@@ -127,7 +127,9 @@ async function askCommand(params: string[], { reply, userDisplayName }: BotComma
 		const truncated = truncate(response.text());
 
 		if (!truncated) {
-			console.log(`${gray("[SYSTEM]")} Message failed to generate. Ratings:`);
+			console.log(`${gray("[SYSTEM]")} Message failed to generate.`);
+			console.log(`  Raw text: ${response.text()}`);
+			console.log(`  Ratings:`);
 			console.log(formatRatings(response.candidates![0].safetyRatings!));
 		} else {
 			console.log(`${cyan("[ANSWER]")} ${truncated}`);
@@ -182,10 +184,10 @@ function formatRatings(ratings: SafetyRating[]) {
 	}
 
 	return [
-		`  - Dangerous content: ${getProbability("DANGER")}`,
-		`  - Harassment: ${getProbability("HARASS")}`,
-		`  - Hate speech: ${getProbability("HATE")}`,
-		`  - Sexually explicit: ${getProbability("SEXUAL")}`,
+		`    - Dangerous content: ${getProbability("DANGER")}`,
+		`    - Harassment: ${getProbability("HARASS")}`,
+		`    - Hate speech: ${getProbability("HATE")}`,
+		`    - Sexually explicit: ${getProbability("SEXUAL")}`,
 	].join("\n");
 }
 // #endregion
