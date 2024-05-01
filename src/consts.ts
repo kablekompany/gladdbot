@@ -2,7 +2,7 @@ export const MAX_OUTPUT_LENGTH = 450;
 export const COMMAND_COOLDOWN = 15_000;
 
 export const MODERATORS = [
-	"AliDeAdam",
+	"AliDeAdam (male)",
 	"Cheese4Hire",
 	"Evilton",
 	"Jakkuii",
@@ -26,7 +26,7 @@ export const REGULARS = [
 	"AkinaSpeedStarWRX",
 	"arminaterr",
 	"bbaccararose (female)",
-	"carmellavender",
+	"carmellavender (male)",
 	"corvidsquill",
 	"DeAngeloSr",
 	"FleshFurnace",
@@ -41,7 +41,8 @@ export const REGULARS = [
 	"ltsDerpDiggler",
 	"ltsIsMac",
 	"ltsme_val (female)",
-	"MsKenner",
+	"Mari___Juana",
+	"MsKenner (female)",
 	"omgitswabamy",
 	"potatis_b",
 	"Quikstop",
