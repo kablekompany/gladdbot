@@ -111,7 +111,7 @@ auth.addUser(
 const bot = new Bot({
 	authProvider: auth,
 	channels: ["Gladd", "xiBread_"],
-	commands: [createBotCommand("ask", askCommand, { aliases: ["ai"], globalCooldown: 0 })],
+	commands: [createBotCommand("ask", askCommand, { aliases: ["ai"], globalCooldown: 10 })],
 });
 
 bot.onConnect(() => console.log(`${gray("[SYSTEM]")} Connected`));
