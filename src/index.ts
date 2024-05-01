@@ -7,6 +7,8 @@ import {
 	GoogleGenerativeAIError,
 	HarmBlockThreshold,
 	HarmCategory,
+	HarmProbability,
+	type SafetyRating,
 } from "@google/generative-ai";
 import { RefreshingAuthProvider } from "@twurple/auth";
 import { ChatClient } from "@twurple/chat";
@@ -117,12 +119,15 @@ client.onMessage(async (channel, user, text, msg) => {
 
 	const now = Date.now();
 	const username = yellow(msg.userInfo.displayName);
+	const expiration = globalTimestamp + COMMAND_COOLDOWN;
 
-	if (now < globalTimestamp + COMMAND_COOLDOWN) {
-		console.log(
-			`${yellow("[COOLDOWN]")} ${username} - ${green(new Date(now).toLocaleString("en-US"))}`,
+	if (now < expiration) {
+		const timestamp = green(new Date(now).toLocaleString("en-US"));
+		const remaining = ((expiration - now) / 60 / 60).toFixed(1);
+
+		return console.log(
+			`${yellow("[COOLDOWN]")} ${username} - ${timestamp} (${remaining} seconds left)`,
 		);
-		return;
 	}
 
 	const question = text.slice(4).trim();
@@ -136,7 +141,7 @@ client.onMessage(async (channel, user, text, msg) => {
 
 		if (!truncated) {
 			console.log(`${gray("[SYSTEM]")} Message failed to generate. Ratings:`);
-			console.log(response.candidates?.[0].safetyRatings);
+			console.log(formatRatings(response.candidates![0].safetyRatings!));
 		} else {
 			rateLimitMessageSent = false;
 
@@ -184,5 +189,27 @@ function truncate(text: string, length = MAX_OUTPUT_LENGTH) {
 		.split(/(\.|\?|!)/)
 		.slice(0, -1)
 		.join("");
+}
+
+const probabilityColors: Record<HarmProbability, (input: string) => string> = {
+	[HarmProbability.HARM_PROBABILITY_UNSPECIFIED]: gray,
+	[HarmProbability.NEGLIGIBLE]: cyan,
+	[HarmProbability.LOW]: green,
+	[HarmProbability.MEDIUM]: yellow,
+	[HarmProbability.HIGH]: red,
+};
+
+function formatRatings(ratings: SafetyRating[]) {
+	function getProbability(keyword: string) {
+		const { probability } = ratings.find((rating) => rating.category.includes(keyword))!;
+		return probabilityColors[probability](probability);
+	}
+
+	return [
+		`  - Dangerous content: ${getProbability("DANGER")}`,
+		`  - Harassment: ${getProbability("HARASS")}`,
+		`  - Hate speech: ${getProbability("HATE")}`,
+		`  - Sexually explicit: ${getProbability("SEXUAL")}`,
+	].join("\n");
 }
 // #endregion
