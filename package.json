@@ -1,12 +1,12 @@
 {
 	"name": "gladdbot",
-	"version": "1.0.0",
-	"description": "",
+	"private": true,
 	"type": "module",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"author": "Oscar Lee-Vermeren <oscar.leevermeren@gmail.com>",
 	"packageManager": "pnpm@9.0.0",
+	"license": "MIT",
 	"prettier": {
 		"semi": true,
 		"tabWidth": 4,
