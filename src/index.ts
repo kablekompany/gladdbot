@@ -17,13 +17,16 @@ const MAX_OUTPUT_LENGTH = 495;
 
 // #region AI
 const rawInstructions = await fs.readFile("./data/instructions.txt", "utf-8");
+
 const moderatorList = await fs.readFile("./data/moderators.txt", "utf-8");
 const regularsList = await fs.readFile("./data/regulars.txt", "utf-8");
+const emoteList = await fs.readFile("./data/emotes.txt", "utf-8");
 
 const systemInstruction = rawInstructions
 	.replace("{{MAX_OUTPUT_LENGTH}}", `${MAX_OUTPUT_LENGTH}`)
 	.replace("{{MODERATORS}}", moderatorList.replace(/\n/g, ", "))
-	.replace("{{REGULARS}}", regularsList.replace(/\n/g, ", "));
+	.replace("{{REGULARS}}", regularsList.replace(/\n/g, ", "))
+	.replace("{{EMOTES}}", emoteList.replace(/\n/g, ", "));
 
 if (systemInstruction.length > 8192) {
 	throw new RangeError(red("System instruction length exceeds 8192 characters."));
@@ -124,7 +127,7 @@ async function exec(params: string[], { reply, userDisplayName }: BotCommandCont
 
 	try {
 		const { response } = await model.generateContent(`${userDisplayName} asked ${question}`);
-		const truncated = truncate(response.text());
+		const truncated = sanitize(response.text());
 
 		if (!truncated) {
 			console.log(`${gray("[SYSTEM]")} Message failed to send.`);
@@ -136,37 +139,36 @@ async function exec(params: string[], { reply, userDisplayName }: BotCommandCont
 			await reply(truncated);
 		}
 	} catch (error) {
+		// TODO: handle errors better
 		if (!(error instanceof GoogleGenerativeAIError)) return;
 
 		console.log(red(error.message));
 	}
 }
 
+const emojiRegex = new RegExp(
+	`(${emoteList
+		.split("\n")
+		.map((line) => line.split(" ")[0])
+		.join("|")})([.,!?])`,
+	"g",
+);
+
 /**
- * Helper to truncate text because AI likes to ignore the max output length.
- * This also makes sure that the response ends with a full sentence instead
- * of stopping mid-sentence.
+ * Ensures text stays under the limit, removes emojis, new lines, and
+ * markdown escapes, and adds a space between 7TV emotes and punctuation.
+ *
+ * Yes, naively slicing will possibly cut off text mid-sentence; however,
+ * there's no good method to detect the end of a sentence when using 7TV
+ * emotes.
  */
-function truncate(text: string, length = MAX_OUTPUT_LENGTH) {
-	text = text.trim().replace(/\n/g, " ").replace(/\\_/g, "_");
-
-	let truncated = "";
-
-	for (const word of text.split(" ")) {
-		if (truncated.length + word.length + 1 > length) break;
-		truncated += `${word} `;
-	}
-
-	truncated = truncated.trim();
-
-	if (/(?:[.?!]|\p{Emoji})$/u.test(truncated)) {
-		return truncated;
-	}
-
-	return truncated
-		.split(/(\.|\?|!)/)
-		.slice(0, -1)
-		.join("");
+function sanitize(text: string, limit = MAX_OUTPUT_LENGTH) {
+	return text
+		.slice(0, limit)
+		.replace(/\n/g, " ")
+		.replace(/\\_/g, "_")
+		.replace(/\p{Emoji}/gu, "")
+		.replace(emojiRegex, "$1 $2");
 }
 
 const probabilityColors: Record<HarmProbability, (input: string) => string> = {
