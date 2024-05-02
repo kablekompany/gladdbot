@@ -5,8 +5,11 @@
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"author": "Oscar Lee-Vermeren <oscar.leevermeren@gmail.com>",
-	"packageManager": "pnpm@9.0.0",
 	"license": "MIT",
+	"packageManager": "pnpm@9.0.0",
+	"engines": {
+		"node": ">=20.6.0"
+	},
 	"prettier": {
 		"semi": true,
 		"tabWidth": 4,
