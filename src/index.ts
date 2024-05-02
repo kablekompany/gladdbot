@@ -127,16 +127,21 @@ async function exec(params: string[], { reply, userDisplayName }: BotCommandCont
 
 	try {
 		const { response } = await model.generateContent(`${userDisplayName} asked ${question}`);
-		const truncated = sanitize(response.text());
 
-		if (!truncated) {
+		const rawText = response.text();
+		const sanitized = sanitize(rawText);
+
+		if (!sanitized) {
 			console.log(`${gray("[SYSTEM]")} Message failed to send.`);
-			console.log(`  Raw text: ${response.text()}`);
+			console.log(`  Raw text: ${rawText}`);
 			console.log(`  Ratings:`);
 			console.log(formatRatings(response.candidates![0].safetyRatings!));
 		} else {
-			console.log(`${cyan("[ANSWER]")} ${truncated}`);
-			await reply(truncated);
+			console.log(`${cyan("[ANSWER]")}`);
+			console.log(`  Raw text: ${rawText}`);
+			console.log(`  Sanitized: ${sanitized}`);
+
+			await reply(sanitized);
 		}
 	} catch (error) {
 		// TODO: handle errors better
@@ -146,7 +151,7 @@ async function exec(params: string[], { reply, userDisplayName }: BotCommandCont
 	}
 }
 
-const emojiRegex = new RegExp(
+const emoteRegex = new RegExp(
 	`(${emoteList
 		.split("\n")
 		.map((line) => line.split(" ")[0])
@@ -167,8 +172,11 @@ function sanitize(text: string, limit = MAX_OUTPUT_LENGTH) {
 		.slice(0, limit)
 		.replace(/\n/g, " ")
 		.replace(/\\_/g, "_")
-		.replace(/\p{Emoji}/gu, "")
-		.replace(emojiRegex, "$1 $2");
+		.replace(
+			/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g,
+			"",
+		)
+		.replace(emoteRegex, "$1 $2");
 }
 
 const probabilityColors: Record<HarmProbability, (input: string) => string> = {
