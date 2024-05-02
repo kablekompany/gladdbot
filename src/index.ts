@@ -86,8 +86,8 @@ auth.onRefresh(async (_, data) => {
 			expires_in,
 			obtainment_timestamp
 		) VALUES (
-			'${data.accessToken}',
-			'${data.refreshToken}',
+			${data.accessToken},
+			${data.refreshToken},
 			${data.expiresIn},
 			${data.obtainmentTimestamp}
 		);
@@ -111,12 +111,12 @@ auth.addUser(
 const bot = new Bot({
 	authProvider: auth,
 	channels: ["Gladd", "xiBread_"],
-	commands: [createBotCommand("ask", askCommand, { aliases: ["ai"], globalCooldown: 10 })],
+	commands: [createBotCommand("ask", exec, { aliases: ["ai"], globalCooldown: 10 })],
 });
 
 bot.onConnect(() => console.log(`${gray("[SYSTEM]")} Connected`));
 
-async function askCommand(params: string[], { reply, userDisplayName }: BotCommandContext) {
+async function exec(params: string[], { reply, userDisplayName }: BotCommandContext) {
 	const question = params.join(" ");
 	if (!question) return;
 
@@ -127,7 +127,7 @@ async function askCommand(params: string[], { reply, userDisplayName }: BotComma
 		const truncated = truncate(response.text());
 
 		if (!truncated) {
-			console.log(`${gray("[SYSTEM]")} Message failed to generate.`);
+			console.log(`${gray("[SYSTEM]")} Message failed to send.`);
 			console.log(`  Raw text: ${response.text()}`);
 			console.log(`  Ratings:`);
 			console.log(formatRatings(response.candidates![0].safetyRatings!));
