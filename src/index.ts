@@ -128,7 +128,7 @@ async function exec(params: string[], { reply, userDisplayName: user }: BotComma
 	console.log(`${cyan("[QUESTION]")} ${yellow(user)}: ${question}`);
 
 	try {
-		const { response } = await model.generateContent(question);
+		const { response } = await model.generateContent(`${user} asked ${question}`);
 
 		const rawText = response.text();
 		const sanitized = sanitize(rawText);
