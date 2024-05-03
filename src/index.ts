@@ -13,7 +13,7 @@ import {
 import { RefreshingAuthProvider } from "@twurple/auth";
 import { Bot, type BotCommandContext, createBotCommand } from "@twurple/easy-bot";
 
-const MAX_OUTPUT_LENGTH = 495;
+const MAX_OUTPUT_LENGTH = 400;
 
 // #region AI
 const rawInstructions = await fs.readFile("./data/instructions.txt", "utf-8");
@@ -23,14 +23,19 @@ const regularsList = await fs.readFile("./data/regulars.txt", "utf-8");
 const emoteList = await fs.readFile("./data/emotes.txt", "utf-8");
 
 const systemInstruction = rawInstructions
-	.replace("{{MAX_OUTPUT_LENGTH}}", `${MAX_OUTPUT_LENGTH}`)
 	.replace("{{MODERATORS}}", moderatorList.replace(/\n/g, ", "))
 	.replace("{{REGULARS}}", regularsList.replace(/\n/g, ", "))
 	.replace("{{EMOTES}}", emoteList.replace(/\n/g, ", "));
 
 if (systemInstruction.length > 8192) {
-	throw new RangeError(red("System instruction length exceeds 8192 characters."));
+	throw new RangeError(
+		red(`System instruction length exceeds 8192 characters (${systemInstruction.length}).`),
+	);
 }
+
+console.log(
+	`${gray("[SYSTEM]")} System instructions loaded (${yellow(systemInstruction.length)} characters)`,
+);
 
 const ai = new GoogleGenerativeAI(process.env.GOOGLE_AI_KEY!);
 const model = ai.getGenerativeModel({
@@ -50,6 +55,10 @@ const model = ai.getGenerativeModel({
 			category: HarmCategory.HARM_CATEGORY_HARASSMENT,
 			threshold: HarmBlockThreshold.BLOCK_NONE,
 		},
+		// {
+		// 	category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+		// 	threshold: HarmBlockThreshold.BLOCK_LOW_AND_ABOVE
+		// }
 	],
 	generationConfig: {
 		maxOutputTokens: MAX_OUTPUT_LENGTH,
@@ -67,14 +76,7 @@ interface TokenData {
 	obtainment_timestamp: number;
 }
 
-const [
-	{
-		access_token: accessToken,
-		refresh_token: refreshToken,
-		expires_in: expiresIn,
-		obtainment_timestamp: obtainmentTimestamp,
-	},
-] = await sql<[TokenData]>`SELECT * FROM tokens`;
+const [data] = await sql<[TokenData]>`SELECT * FROM tokens`;
 
 const auth = new RefreshingAuthProvider({
 	clientId: process.env.TWITCH_CLIENT_ID!,
@@ -100,10 +102,10 @@ auth.onRefresh(async (_, data) => {
 auth.addUser(
 	process.env.TWITCH_USER_ID!,
 	{
-		accessToken,
-		refreshToken,
-		expiresIn,
-		obtainmentTimestamp,
+		accessToken: data.access_token,
+		refreshToken: data.refresh_token,
+		expiresIn: data.expires_in,
+		obtainmentTimestamp: data.obtainment_timestamp,
 		scope: ["chat:edit", "chat:read"],
 	},
 	["chat"],
@@ -117,16 +119,16 @@ const bot = new Bot({
 	commands: [createBotCommand("ask", exec, { aliases: ["ai"], globalCooldown: 10 })],
 });
 
-bot.onConnect(() => console.log(`${gray("[SYSTEM]")} Connected`));
+bot.onConnect(() => console.log(`${gray("[SYSTEM]")} Connected to Twitch`));
 
-async function exec(params: string[], { reply, userDisplayName }: BotCommandContext) {
+async function exec(params: string[], { reply, userDisplayName: user }: BotCommandContext) {
 	const question = params.join(" ");
 	if (!question) return;
 
-	console.log(`${cyan("[QUESTION]")} ${yellow(userDisplayName)}: ${question}`);
+	console.log(`${cyan("[QUESTION]")} ${yellow(user)}: ${question}`);
 
 	try {
-		const { response } = await model.generateContent(`${userDisplayName} asked ${question}`);
+		const { response } = await model.generateContent(question);
 
 		const rawText = response.text();
 		const sanitized = sanitize(rawText);
@@ -147,10 +149,12 @@ async function exec(params: string[], { reply, userDisplayName }: BotCommandCont
 		// TODO: handle errors better
 		if (!(error instanceof GoogleGenerativeAIError)) return;
 
-		console.log(red(error.message));
+		console.error(red(error.message));
 	}
 }
+// #endregion
 
+// #region Util
 const emoteRegex = new RegExp(
 	`(${emoteList
 		.split("\n")
@@ -158,6 +162,11 @@ const emoteRegex = new RegExp(
 		.join("|")})([.,!?])`,
 	"g",
 );
+
+// Using \p{Emoji} matches numbers as well, hence the unicode ranges
+// https://stackoverflow.com/a/41543705
+const emojiRegex =
+	/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
 
 /**
  * Ensures text stays under the limit, removes emojis, new lines, and
@@ -170,16 +179,14 @@ const emoteRegex = new RegExp(
 function sanitize(text: string, limit = MAX_OUTPUT_LENGTH) {
 	return text
 		.slice(0, limit)
+		.replace(/\*/g, "")
 		.replace(/\n/g, " ")
-		.replace(/\\_/g, "_")
-		.replace(
-			/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g,
-			"",
-		)
+		.replace(/\\(.)/g, "$1")
+		.replace(emojiRegex, "")
 		.replace(emoteRegex, "$1 $2");
 }
 
-const probabilityColors: Record<HarmProbability, (input: string) => string> = {
+const probabilityColors = {
 	[HarmProbability.HARM_PROBABILITY_UNSPECIFIED]: gray,
 	[HarmProbability.NEGLIGIBLE]: cyan,
 	[HarmProbability.LOW]: green,
@@ -189,8 +196,8 @@ const probabilityColors: Record<HarmProbability, (input: string) => string> = {
 
 function formatRatings(ratings: SafetyRating[]) {
 	function getProbability(keyword: string) {
-		const { probability } = ratings.find((rating) => rating.category.includes(keyword))!;
-		return probabilityColors[probability](probability);
+		const { probability: p } = ratings.find((r) => r.category.includes(keyword))!;
+		return probabilityColors[p](p);
 	}
 
 	return [
