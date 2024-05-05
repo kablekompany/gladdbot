@@ -116,7 +116,13 @@ auth.addUser(
 const bot = new Bot({
 	authProvider: auth,
 	channels: ["Gladd", "xiBread_"],
-	commands: [createBotCommand("ask", exec, { aliases: ["ai"], globalCooldown: 15 })],
+	commands: [
+		createBotCommand("ask", exec, {
+			aliases: ["ai"],
+			globalCooldown: 15,
+			userCooldown: 30,
+		}),
+	],
 });
 
 bot.onConnect(() => console.log(`${gray("[SYSTEM]")} Connected to Twitch`));
