@@ -168,22 +168,24 @@ const emoteRegex = new RegExp(
 const emojiRegex =
 	/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
 
-/**
- * Ensures text stays under the limit, removes emojis, new lines, and
- * markdown escapes, and adds a space between 7TV emotes and punctuation.
- *
- * Yes, naively slicing will possibly cut off text mid-sentence; however,
- * there's no good method to detect the end of a sentence when using 7TV
- * emotes.
- */
 function sanitize(text: string, limit = MAX_OUTPUT_LENGTH) {
-	return text
-		.slice(0, limit)
-		.replace(/\*/g, "")
-		.replace(/\n/g, " ")
-		.replace(/\\(.)/g, "$1")
-		.replace(emojiRegex, "")
-		.replace(emoteRegex, "$1 $2");
+	return (
+		text
+			/**
+			 * Yes, naively slicing will possibly cut off text mid-sentence; however,
+			 * there's no good method to detect the end of a sentence when using 7TV
+			 * emotes.
+			 */
+			.slice(0, limit)
+			// insert zws at the beginning of commands
+			.replace(/^([!/])/, "\u200B$1")
+			// newlines to spaces
+			.replace(/\n/g, " ")
+			// remove escapes
+			.replace(/\\(.)/g, "$1")
+			.replace(emojiRegex, "")
+			.replace(emoteRegex, "$1 $2")
+	);
 }
 
 const probabilityColors = {
