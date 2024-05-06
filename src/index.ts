@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import process from "node:process";
+import util from "node:util";
 import { cyan, gray, red, yellow } from "kleur/colors";
 import {
 	GoogleGenerativeAI,
@@ -75,6 +76,8 @@ const bot = new Bot({
 
 bot.onConnect(() => console.log(`${gray("[SYSTEM]")} Connected to Twitch`));
 
+const inspect = (str: string) => util.inspect(str, { colors: true });
+
 async function exec(params: string[], { reply, userDisplayName: user }: BotCommandContext) {
 	const question = params.join(" ");
 	if (!question) return;
@@ -89,13 +92,13 @@ async function exec(params: string[], { reply, userDisplayName: user }: BotComma
 
 		if (!sanitized) {
 			console.log(`${gray("[SYSTEM]")} Message failed to send.`);
-			console.log(`  Raw text: ${rawText}`);
-			console.log(`  Ratings:`);
+			console.log(`  Raw text: ${inspect(rawText)}`);
+			console.log(`   Ratings:`);
 			console.log(formatRatings(response.candidates![0].safetyRatings!));
 		} else {
 			console.log(`${cyan("[ANSWER]")}`);
-			console.log(`  Raw text: ${rawText}`);
-			console.log(`  Sanitized: ${sanitized}`);
+			console.log(`   Raw text: ${inspect(rawText)}`);
+			console.log(`  Sanitized: ${inspect(sanitized)}`);
 
 			await reply(sanitized);
 		}
@@ -103,6 +106,10 @@ async function exec(params: string[], { reply, userDisplayName: user }: BotComma
 		// TODO: handle errors better
 		if (!(error instanceof GoogleGenerativeAIError)) return;
 
-		console.error(red(error.message));
+		if (error.message.includes("429")) {
+			console.error(red(error.message.slice(error.message.indexOf("429") - 1)));
+		} else {
+			console.error(red(error.message));
+		}
 	}
 }
