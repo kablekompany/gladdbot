@@ -8,21 +8,19 @@ import {
 	HarmCategory,
 } from "@google/generative-ai";
 import { Bot, type BotCommandContext, createBotCommand } from "@twurple/easy-bot";
+import emoteList from "../data/emotes.json";
+import moderatorList from "../data/moderators.json";
+import regularsList from "../data/regulars.json";
 import { auth } from "./auth";
 import { formatRatings, sanitize } from "./util";
 
 const MAX_OUTPUT_LENGTH = 400;
-
 const rawInstructions = await fs.readFile("./data/instructions.txt", "utf-8");
 
-const moderatorList = await fs.readFile("./data/moderators.txt", "utf-8");
-const regularsList = await fs.readFile("./data/regulars.txt", "utf-8");
-const emoteList = await fs.readFile("./data/emotes.txt", "utf-8");
-
 const systemInstruction = rawInstructions
-	.replace("{{MODERATORS}}", moderatorList.replace(/\n/g, ", "))
-	.replace("{{REGULARS}}", regularsList.replace(/\n/g, ", "))
-	.replace("{{EMOTES}}", emoteList.replace(/\n/g, ", "));
+	.replace("{{MODERATORS}}", moderatorList.join(", "))
+	.replace("{{REGULARS}}", regularsList.join(", "))
+	.replace("{{EMOTES}}", emoteList.join(", "));
 
 if (systemInstruction.length > 8192) {
 	throw new RangeError(

@@ -3,12 +3,9 @@ import { HarmProbability, type SafetyRating } from "@google/generative-ai";
 
 let emoteRegex: RegExp | undefined;
 
-export function sanitize(text: string, options: { limit: number; emoteList: string }) {
+export function sanitize(text: string, options: { limit: number; emoteList: string[] }) {
 	emoteRegex ??= new RegExp(
-		`(${options.emoteList
-			.split("\n")
-			.map((line) => line.split(" ")[0])
-			.join("|")})[.,!?]`,
+		`(${options.emoteList.map((line) => line.split(" ")[0]).join("|")})[.,!?]`,
 		"g",
 	);
 
