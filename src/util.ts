@@ -3,17 +3,12 @@ import { HarmProbability, type SafetyRating } from "@google/generative-ai";
 
 let emoteRegex: RegExp | undefined;
 
-// Using \p{Emoji} matches numbers as well, hence the unicode ranges
-// https://stackoverflow.com/a/41543705
-const emojiRegex =
-	/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
-
 export function sanitize(text: string, options: { limit: number; emoteList: string }) {
 	emoteRegex ??= new RegExp(
 		`(${options.emoteList
 			.split("\n")
 			.map((line) => line.split(" ")[0])
-			.join("|")})([.,!?])`,
+			.join("|")})[.,!?]`,
 		"g",
 	);
 
@@ -31,8 +26,9 @@ export function sanitize(text: string, options: { limit: number; emoteList: stri
 			.replace(/\n/g, " ")
 			// remove escapes
 			.replace(/\\(.)/g, "$1")
-			.replace(emojiRegex, "")
-			.replace(emoteRegex, "$1 $2")
+			// remove markdown, html entities, and emojis
+			.replace(/\*{3}|&#\d+;|\p{ExtPict}/gu, "")
+			.replace(emoteRegex, "$1")
 	);
 }
 
