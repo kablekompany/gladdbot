@@ -23,9 +23,10 @@ export function sanitize(text: string, options: { limit: number; emoteList: stri
 			.replace(/\n/g, " ")
 			// remove escapes
 			.replace(/\\(.)/g, "$1")
-			// remove markdown, html entities, and emojis
-			.replace(/\*{3}|&#\d+;|\p{ExtPict}/gu, "")
+			// remove asterisks, html entities, and emojis
+			.replace(/\*+|&#\d+;|\p{ExtPict}/gu, "")
 			.replace(emoteRegex, "$1")
+			.trim()
 	);
 }
 
