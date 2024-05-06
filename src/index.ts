@@ -66,8 +66,7 @@ const bot = new Bot({
 	authProvider: auth,
 	channels: ["Gladd", "xiBread_"],
 	commands: [
-		createBotCommand("ask", exec, {
-			aliases: ["ai"],
+		createBotCommand("ai", exec, {
 			globalCooldown: 15,
 			userCooldown: 30,
 		}),
